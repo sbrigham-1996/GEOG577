@@ -1,0 +1,98 @@
+var srtm = ee.Image("USGS/SRTMGL1_003");
+var elevation = srtm.select('elevation');
+var slope = ee.Terrain.slope(elevation);
+var clippedSRTM = slope.clip(roi);
+Map.addLayer(clippedSRTM, {min: 0, max: 60}, 'Clipped SRTM');
+
+var June_NDVI = ee.ImageCollection("COPERNICUS/S2_SR")
+  .filterBounds(roi)
+  .filterDate('2024-06-01','2024-06-30')
+  .filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'less_than', 5)
+  .mosaic().clip(roi);
+
+var june_mosaic = June_NDVI;
+
+
+var nir_pre = June_NDVI.select('B8');
+var red_pre = June_NDVI.select('B4');
+var June_NDVI_calc = ((nir_pre).subtract(red_pre)).divide((nir_pre).add(red_pre)).rename('June_NDVI');
+print(June_NDVI, 'June_NDVI:');
+
+
+var falseColorpre = {
+  min: -500,
+  max: 500,
+
+};
+
+var Dec_NDVI = ee.ImageCollection("COPERNICUS/S2_SR")
+  .filterBounds(roi)
+  .filterDate('2024-12-01','2024-12-30')
+  .filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'less_than', 5)
+  .mosaic().clip(roi);
+  
+var nir_post = Dec_NDVI.select('B8');
+var red_post = Dec_NDVI.select('B4');
+var Dec_NDVI_calc = ((nir_post).subtract(red_post)).divide((nir_post).add(red_post)).rename('Dec_NDVI');
+var Dec_mosaic = Dec_NDVI;
+print(Dec_NDVI, "Dec_NDVI");
+
+var falseColorpost = {
+  min: -500,
+  max: 500,
+
+
+};
+var NDVI_Difference = ((June_NDVI).subtract (Dec_NDVI)).multiply(1000);
+print('NDVI_Difference:', NDVI_Difference);
+
+
+var Dif_ndvi_viz = {
+  min: 0,
+  max: 0.3,
+
+};
+
+var Dif_NDVI_Masked = NDVI_Difference.updateMask(June_NDVI.select("SCL").neq(6));
+var Post_Palisades_Clipped = Dif_NDVI_Masked.clip(roi);
+
+var falseColorViz = {
+  min: -1,
+  max: 1,
+  bands: ['B8', 'B5', 'B4']
+
+};
+
+Map.addLayer(Dif_NDVI_Masked, falseColorViz, "Difference Masked (False Color)");
+//1. Interpret your results. Specifically:
+// The end results show a majority gain of vegetation in our 'roi'.
+// The Pacific Palisades and Eaton fires have a strong trend of vegetation growth from June
+// to Dec, and this growth of chapparal is indicative of the devastating wildfires in SoCal.
+
+//
+
+//a) What do the different values of your difference image represent? 
+//  The colored pixels of yellow and red are densely vegetated areas in the mountainous regions
+//  One can spot the urban areas as the color white because they don't reflect radiation 
+//  acquired by the NDVI//
+
+//b) Is there a better way (compared to difference in NDVI) to assess fuel conditions from remote sensing data?
+  //  With a little research it's clear that while NDVI is a strong tool, there are other 
+  // indices we can use in conjunction, such as NDMI, which is the Normalized Dif. Moisture Indice//
+
+//c) Are these two dates the best dates to use for this analysis? 
+//  These two dates likely aren't the best because we had pulled randomly from the parameters
+// we set with Sentinel and if one wanted to do more research to find better dates, they could.
+// however, assessing NDVI differences in present time, would likely show drastic pixel-color
+// change in the roi due to burns devastating land.//
+
+//d) What notable patterns do you observe in your difference image, and how might they be explained?
+// The most notable patterns are the vegetation buildup in the highly elevated areas.
+// also, the pacific palisades was covered in vegetation which points out to why the fires
+// were so devastating in that region//
+
+//e) Summarize the difference in spatial resolution between the SRTM data and the Sentinel Data. 
+// The difference in spatial resolution between the SRTM data and the Sentinel Data is
+// the srtm dataset is a vector file, which depicts contour lines that show how massive these
+// mountains are in relation to the coast. The Sentinel Data is raster data, and acquires 
+// different spectral measurements to accurately depict the landscape in true color. //
