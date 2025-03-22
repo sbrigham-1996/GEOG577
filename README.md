@@ -1,1 +1,1 @@
-Check out my website: https://sbrigham-1996.github.io/GEOG577/
+Check out my project idea: https://sbrigham-1996.github.io/GEOG577/index
