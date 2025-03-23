@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>basic gee script</title>
+</head>
+<body>
+  // STEP 1: DEFINE THE STATE BOUNDARY FOR PARÁ //
+// Load a FeatureCollection containing Brazil state boundaries (FAO GAUL)
+// and filter by the name 'Pará'.
+var para = ee.FeatureCollection("FAO/GAUL_SIMPLIFIED_500m/2015/level1")
+  .filter(ee.Filter.eq('ADM1_NAME', 'Pará'));
+
+/***** STEP 2: CENTER THE MAP ON PARÁ *****/
+Map.centerObject(para, 6);  // Zoom level 6 generally fits all of Pará
+
+/***** STEP 3: VISUALIZE THE PARA BOUNDARY *****/
+// We add the boundary as a simple outline in red.
+Map.addLayer(para, {color: 'red'}, 'Pará Boundary');
+
+/***** STEP 4: SELECT AND PROCESS AN IMAGERY DATASET *****/
+// Example: Landsat 8 Collection 1 Surface Reflectance for 2020
+var landsatCollection = ee.ImageCollection("LANDSAT/LC08/C01/T1_SR")
+  // Filter for one year
+  .filterDate('2020-01-01', '2020-12-31')
+  // Filter to images intersecting Pará
+  .filterBounds(para);
+
+// Create a single composite by taking the median pixel value.
+var landsatComposite = landsatCollection.median();
+
+/***** STEP 5: DEFINE VISUALIZATION PARAMETERS *****/
+// Here we use a true-color band combination (Bands 4,3,2 for Landsat 8).
+var vizParams = {
+  bands: ['B4', 'B3', 'B2'],
+  min: 0,
+  max: 3000
+};
+
+/***** STEP 6: CLIP THE LAYER TO PARÁ AND ADD TO THE MAP *****/
+var landsatPara = landsatComposite.clip(para);
+Map.addLayer(landsatPara, vizParams, 'Landsat 8 (2020)');
+
+/***** ADDITIONAL NOTES *****/
+/*
+1. To swap in different imagery, simply replace the ImageCollection reference:
+   - Hansen Global Forest Change: ee.Image("UMD/hansen/global_forest_change_2020_v1_8")
+   - MODIS (e.g., NDVI): ee.ImageCollection("MODIS/006/MOD13Q1")
+   - Or any other dataset from the GEE catalog.
+
+2. Adjust `filterDate()`, `filterBounds()`, or visualization parameters as needed
+   for your specific research questions.
+
+3. If you have your own shapefile/FeatureCollection for Pará (e.g., a more detailed
+   boundary), you can upload it to your GEE assets and replace the relevant line:
+   var para = ee.FeatureCollection("users/<your_username>/<your_asset_name>");
+*/
+</body>
+</html>
